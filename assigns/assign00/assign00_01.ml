@@ -19,3 +19,7 @@
 
 let sqrt (n : int) : int =
   (* YOUR CODE GOES HERE *)
+   let rec find i =
+      if i * i >= n then i
+      else find (i + 1)
+   in find 0
