@@ -15,4 +15,9 @@
  *)
 
 let is_perfect (n : int) : bool =
-  assert false (* REMOVE THIS LINE AND FILL IN YOUR SOLUTION *)
+  let rec help x sum = 
+    if x = 0 then sum
+    else if n mod x = 0 then help (x-1) (sum + x)
+    else help (x-1) sum
+  in 
+    let perfect = help (n-1) 0 in perfect = n

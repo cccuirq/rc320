@@ -22,4 +22,9 @@
  *)
 
 let string_rev (s : string) : string =
-  assert false (* REMOVE THIS LINE AND FILL IN YOUR SOLUTION *)
+  let rec helper i = 
+    if i >= String.length s then ""
+    else (helper (i+1)) ^ (String.make 1 (s.[i]))
+  in
+  helper 0
+  

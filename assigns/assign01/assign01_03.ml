@@ -24,4 +24,8 @@
  *)
 
 let fast_fib (n : int) : int =
-  assert false (* REMOVE THIS LINE AND FILL IN YOUR SOLUTION *)
+  let rec help n pp p = 
+    if n = 0 || n = 1 then p + pp
+    else help (n-1) p (pp+p) 
+  in 
+    help n 0 1
