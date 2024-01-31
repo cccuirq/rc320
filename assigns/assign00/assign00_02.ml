@@ -21,7 +21,7 @@ let is_prime (n : int) : bool =
   (* YOUR CODE GOES HERE *)
    (* if n = 0 || n = 1 then false
    else  *)
-      let rec find i =
+   let rec find i =
       if i = 0 || i = 1 then true else
       i * i <= n && (n mod i = 0 || find (i+1))
    in not(find 2)

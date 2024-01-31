@@ -17,4 +17,11 @@
  *)
 
 let taxicab (n : int) : int =
-  assert false (* REMOVE THIS LINE AND FILL IN YOUR SOLUTION *)
+  let rec help a b n acc =
+    if a > n then acc
+    else if b > n then help (a + 1) (a + 1) n acc
+    else
+      let sum = (a * a * a) + (b * b * b) in
+      let new_acc = if sum = n then acc + 1 else acc in
+      help a (b + 1) n new_acc
+    in help 0 0 n 0
