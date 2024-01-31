@@ -16,12 +16,14 @@
 
  *)
 
-let taxicab (n : int) : int =
-  let rec help a b n acc =
-    if a > n then acc
-    else if b > n then help (a + 1) (a + 1) n acc
-    else
-      let sum = (a * a * a) + (b * b * b) in
-      let new_acc = if sum = n then acc + 1 else acc in
-      help a (b + 1) n new_acc
-    in help 0 0 n 0
+
+    let taxicab n =
+      let rec check_a a acc = 
+         let rec check_b b acc =
+            if b >= n then acc
+            else if (a*a*a) + (b*b*b) = n then check_b (b + 1) (acc + 1)
+            else check_b (b + 1) acc
+         in
+            if a >= n then acc
+            else check_a (a+1) (check_b a acc)
+      in check_a 1 0
