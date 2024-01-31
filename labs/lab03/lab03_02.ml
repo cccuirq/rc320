@@ -15,4 +15,10 @@
 
 *)
 
-let string_tri s = assert false (* TODO *)
+let string_tri s =
+   let rec help s n = 
+      let len = String.length s in
+      if n <= len then s ^ String.init (n - len) (fun _ -> '*')
+      else (String.sub s 0 n) ^ "\n" ^ help (String.sub s n len) (n+1)
+      in 
+   help s 1

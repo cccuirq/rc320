@@ -19,4 +19,23 @@
 
 *)
 
-let py_trip_hyp n = assert false (* TODO *)
+let py_trip_hyp n =
+   let rec help a b n bo =
+      if a > n then false
+      else if b > n then help (a+1) (a+1) n bo
+      else
+         let sum = a * a + b * b in
+         let bo = (sum = n) in help a (b+1) n bo
+      in help 0 0 n false
+
+let py_trip_hyp_demo n =
+   let rec check_a(a:int):bool = 
+      let rec check_b b =
+         if b >= n then false
+         else if((a*a) + (b*b)) = (n*n) then true
+         else check_b(b + 1)
+      in
+         if a >= n then false
+         else if check_b a = true then true
+         else check_a (a+1)
+   in check_a 1

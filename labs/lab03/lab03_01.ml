@@ -15,4 +15,4 @@
 *)
 
 let rec modulo (n : int) (k : int) : int =
-  assert false (* TODO *)
+  if n < k then n else modulo (n-k) (k)
