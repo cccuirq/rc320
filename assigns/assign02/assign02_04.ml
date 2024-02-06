@@ -25,4 +25,11 @@ type temp
   | Icy of int
 
 let reduce (l : temp list) : temp list =
-  assert false (* TODO *)
+  let rec reduced lst =
+    match lst with
+    | Hot i :: Icy j :: t when i = j -> reduced t
+    | Icy i :: Hot j :: t when i = j -> reduced t
+    | h :: t -> h :: reduced t
+    | [] -> []
+  in reduced l
+
