@@ -1,6 +1,18 @@
 
-type shape = (* TODO *)
 
+
+(* type shape = {
+  Rect of{ 
+    base: Float;
+    height: Float;
+  }
+  |Triangle of{
+    side: Float * Float;
+    angle: Float;
+  }
+} *)
+
+  
 let area (s : shape) =
   match s with
   | Rect r -> r.base *. r.height
