@@ -55,23 +55,26 @@ type user = {
 }
 
 let update_recent (u : user) (time : int) (stale : int) : user =
-  let rec add_to_end lst x = 
-    match lst with
-    | [] -> [x]
-    | h::t -> h :: add_to_end t x
+  let rec compare_add sorted_lst post_to_add =
+    match sorted_lst with
+    | [] -> [post_to_add] (* If list is empty, add post *)
+    | head::tail ->
+      if post_to_add.timestamp > head.timestamp then
+        post_to_add :: sorted_lst (* Insert post at the correct position *)
+      else
+        head :: compare_add tail post_to_add (* Keep looking for the right position *)
   in
-
-  let rec distribute posts old_posts recent_posts =
+   let rec distribute posts old_posts recent_posts =
     match posts with
     | [] -> (old_posts, recent_posts)
     | post :: tail ->
       if (time - post.timestamp) >= stale then
-        distribute tail (add_to_end old_posts post) recent_posts
+        distribute tail (compare_add old_posts post) recent_posts
       else
-        distribute tail old_posts (add_to_end recent_posts post)
+        distribute tail old_posts (compare_add recent_posts post)
   in
   let (new_old_posts, new_recent_posts) = distribute u.recent_posts [] [] in
-  { u with old_posts = u.old_posts @ new_old_posts; recent_posts = new_recent_posts }
+  { u with old_posts = new_old_posts @ u.old_posts; recent_posts = new_recent_posts }
 
 let p t = {title="";content="";timestamp=t}
 let mk op rp = {
