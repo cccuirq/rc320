@@ -25,11 +25,19 @@ type temp
   | Icy of int
 
 let reduce (l : temp list) : temp list =
-  let rec reduced lst =
-    match lst with
-    | Hot i :: Icy j :: t when i = j -> reduced t
-    | Icy i :: Hot j :: t when i = j -> reduced t
-    | h :: t -> h :: reduced t
-    | [] -> []
-  in reduced l
+  let rec loop_list (list : temp list) : temp list =
+    match list with
+    | [] -> list
+    | [head] -> list 
+    | Hot h::Icy i::tail -> if h = i then loop_list tail else Hot h::loop_list (Icy i::tail) 
+    | Icy h::Hot i::tail -> if h = i then loop_list tail else Icy h::loop_list (Hot i::tail) 
+    | h::i::tail -> h::loop_list (i::tail) 
+  in 
+  let rec loop_again list =
+    let news = loop_list list
+    in 
+    if list = news then news
+    else loop_again news
+  in 
+  loop_again l
 

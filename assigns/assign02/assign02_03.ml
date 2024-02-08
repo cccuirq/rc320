@@ -55,38 +55,23 @@ type user = {
 }
 
 let update_recent (u : user) (time : int) (stale : int) : user =
+  let rec add_to_end lst x = 
+    match lst with
+    | [] -> [x]
+    | h::t -> h :: add_to_end t x
+  in
+
   let rec distribute posts old_posts recent_posts =
     match posts with
-    | [] -> (old_posts, recent_posts) (* Return the updated lists when done *)
+    | [] -> (old_posts, recent_posts)
     | post :: tail ->
       if (time - post.timestamp) >= stale then
-        distribute tail (post :: old_posts) recent_posts (* Add to old_posts *)
+        distribute tail (add_to_end old_posts post) recent_posts
       else
-        distribute tail old_posts (post :: recent_posts) (* Keep in recent_posts *)
+        distribute tail old_posts (add_to_end recent_posts post)
   in
-
   let (new_old_posts, new_recent_posts) = distribute u.recent_posts [] [] in
-
-  (* Now, we need to ensure new_old_posts are sorted, since they are prepended in reverse order *)
-  let rec insert_sorted post list =
-    match list with
-    | [] -> [post]
-    | head :: tail as l ->
-      if post.timestamp > head.timestamp then
-        post :: l
-      else
-        head :: insert_sorted post tail
-  in
-
-  let rec sort_posts posts =
-    match posts with
-    | [] -> []
-    | head :: tail -> insert_sorted head (sort_posts tail)
-  in
-
-  let combined_old_posts = sort_posts (new_old_posts @ u.old_posts) in
-
-  { u with old_posts = combined_old_posts; recent_posts = List.rev new_recent_posts }
+  { u with old_posts = u.old_posts @ new_old_posts; recent_posts = new_recent_posts }
 
 let p t = {title="";content="";timestamp=t}
 let mk op rp = {

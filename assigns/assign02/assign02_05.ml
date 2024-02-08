@@ -46,5 +46,38 @@ type point = {
   y : int ;
 }
 
-let rec all_paths (len : int) (stp : point) (endp : point) : (dir * int) list list =
-  assert false (* TODO *)
+let move (direction : dir) (point : point) (steps : int) : point =
+  match direction with
+  | N -> { point with y = point.y + steps }
+  | S -> { point with y = point.y - steps }
+  | E -> { point with x = point.x + steps }
+  | W -> { point with x = point.x - steps }
+
+let equal_points p1 p2 = p1.x = p2.x && p1.y = p2.y
+
+let opposite direction =
+  match direction with
+  | N -> S
+  | S -> N
+  | E -> W
+  | W -> E
+
+let rec all_paths len stp endp =
+  let rec explore_path len stp acc last_dir =
+    if len = 0 then
+      if equal_points stp endp then [List.rev acc] else []
+    else
+      let directions = [N; S; E; W] in
+      let rec add_paths dirs acc =
+        match dirs with
+        | [] -> acc
+        | dir :: ds ->
+          if Some dir = last_dir then add_paths ds acc
+          else
+            let new_point = move dir stp 1 in
+            let paths = explore_path (len - 1) new_point ((dir, 1) :: acc) (Some (opposite dir)) in
+            add_paths ds (acc @ paths)
+      in add_paths directions []
+  in
+  explore_path len stp [] None
+    explore_path len stp [] None

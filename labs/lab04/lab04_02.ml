@@ -21,4 +21,12 @@
 *)
 
 let rec split_at (l : 'a list) (index : int) : 'a list * 'a list =
-  assert false (* TODO *)
+  match l with
+  |[] -> ([],[])
+  |h :: d -> 
+    if index <= 0 
+      then ([], (h::d))
+    else
+      let(left, right) = split_at d (index-1) in (h :: left, right)
+        
+
