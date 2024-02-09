@@ -45,39 +45,37 @@ type point = {
   x : int ;
   y : int ;
 }
-
-let move (direction : dir) (point : point) (steps : int) : point =
-  match direction with
-  | N -> { point with y = point.y + steps }
-  | S -> { point with y = point.y - steps }
-  | E -> { point with x = point.x + steps }
-  | W -> { point with x = point.x - steps }
-
-let equal_points p1 p2 = p1.x = p2.x && p1.y = p2.y
-
-let opposite direction =
-  match direction with
-  | N -> S
-  | S -> N
-  | E -> W
-  | W -> E
-
-let rec all_paths len stp endp =
-  let rec explore_path len stp acc last_dir =
-    if len = 0 then
-      if equal_points stp endp then [List.rev acc] else []
-    else
-      let directions = [N; S; E; W] in
-      let rec add_paths dirs acc =
-        match dirs with
-        | [] -> acc
-        | dir :: ds ->
-          if Some dir = last_dir then add_paths ds acc
+    let move point dir =
+      match dir with
+      | N -> { point with y = point.y + 1 }
+      | S -> { point with y = point.y - 1 }
+      | E -> { point with x = point.x + 1 }
+      | W -> { point with x = point.x - 1 }
+    
+    let rec add_to_end lst x = 
+      match lst with
+      | [] -> [x]
+      | h::t -> h :: add_to_end t x
+    
+    let rec all_paths len start_point end_point =
+      if len = 0 then
+        if start_point = end_point then [[]] else []
+      else if len = 1 then
+        []
+      else
+        let directions = [N; S; E; W] in
+        let rec explore_paths current_p remaining len =
+          if len = 0 then
+            if current_p = end_point then [remaining] else []
           else
-            let new_point = move dir stp 1 in
-            let paths = explore_path (len - 1) new_point ((dir, 1) :: acc) (Some (opposite dir)) in
-            add_paths ds (acc @ paths)
-      in add_paths directions []
-  in
-  explore_path len stp [] None
-    explore_path len stp [] None
+            explore_directions directions current_p remaining len
+        and explore_directions dirs current_point remaining len =
+          match dirs with
+          | [] -> []
+          | dir::rest ->
+            let next_point = move current_point dir in
+            let next_path = (dir, 1) :: remaining in
+            let next_paths = explore_paths next_point next_path (len - 1) in
+            next_paths @ explore_directions rest current_point remaining len
+        in
+        explore_paths start_point [] len
