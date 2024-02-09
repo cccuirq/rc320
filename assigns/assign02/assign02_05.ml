@@ -45,13 +45,13 @@ type point = {
   x : int ;
   y : int ;
 }
-  let rec check_valid path =
+  let rec check_valid path =(*combine two if consecutive are same direction*)
     match path with
     | (dir1, dis1) :: (dir2, dis2) :: rest when dir1 = dir2 -> check_valid ((dir1, dis1 + dis2) :: rest)  (* Combine consecutive moves in the same direction *)
     | head :: rest -> head :: check_valid rest  (* Keep the head and process the rest *)
     | [] -> []
 
-let rec add_to_end paths = 
+let rec add_to_end paths = (*add path in correct way by considering again check_valid*)
   match paths with
   | [] -> []
   | h::t -> check_valid h :: add_to_end t
@@ -65,7 +65,7 @@ let rec add_to_end paths =
       new_current :: (list_each_add item rest )
 
   let rec all_paths len start dst =
-    let only_one start dst = 
+    let only_one start dst = (*only one step left*)
       if start.x - dst.x = 1 && start.y = dst.y then [[(W, 1)]]
       else if dst.x - start.x = 1 && start.y = dst.y then [[(E, 1)]]
       else if start.y - dst.y = 1 && start.x = dst.x then [[(S, 1)]]
