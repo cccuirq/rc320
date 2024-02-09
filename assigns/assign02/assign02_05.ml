@@ -52,7 +52,7 @@ type point = {
       | E -> { point with x = point.x + 1 }
       | W -> { point with x = point.x - 1 }
     
-    let rec add_to_end lst x = 
+    (* let rec add_to_end lst x = 
       match lst with
       | [] -> [x]
       | h::t -> h :: add_to_end t x
@@ -78,4 +78,62 @@ type point = {
             let next_paths = explore_paths next_point next_path (len - 1) in
             next_paths @ explore_directions rest current_point remaining len
         in
-        explore_paths start_point [] len
+        explore_paths start_point [] len *)
+
+        let rec add_to_end lst x =
+          match lst with
+          | [] -> [x]
+          | h :: t -> h :: add_to_end t x
+        
+        let feasible stp endp steps =
+          let dist = abs(stp.x - endp.x) + abs(stp.y - endp.y) in
+          dist <= steps && (steps - dist) mod 2 = 0
+        
+        (* let rec all_paths steps start_point end_point =
+          if steps = 0 then
+            if start_point = end_point then [[]] else []
+          else if not (feasible start_point end_point steps) then
+            []
+          else
+            let directions = [N; S; E; W] in
+            let rec explore_paths current_point path_remaining steps =
+              if steps = 0 then
+                if current_point = end_point then [List.rev path_remaining] else []
+              else
+                List.concat (List.map (fun dir ->
+                  let next_point = move current_point dir in
+                  if feasible next_point end_point (steps - 1) then
+                    let next_step = (dir, 1) in
+                    explore_paths next_point (next_step :: path_remaining) (steps - 1)
+                  else
+                    []
+                ) directions)
+            in
+            explore_paths start_point [] steps *)
+
+let rec explore_paths current_point end_point path_remaining steps =
+  if steps = 0 then
+    if current_point = end_point then [path_remaining] else []
+  else
+    let directions = [N; S; E; W] in
+    explore_and_concat directions current_point end_point path_remaining steps []
+
+and explore_and_concat directions current_point end_point path_remaining steps acc =
+  match directions with
+  | [] -> acc
+  | dir :: rest ->
+    let next_point = move current_point dir in
+    if feasible next_point end_point (steps - 1) then
+      let next_step = (dir, 1) in
+      let new_paths = explore_paths next_point end_point (add_to_end path_remaining next_step) (steps - 1) in
+      explore_and_concat rest current_point end_point path_remaining steps (acc @ new_paths)
+    else
+      explore_and_concat rest current_point end_point path_remaining steps acc
+
+let all_paths steps start_point end_point =
+  if steps = 0 then
+    if start_point = end_point then [[]] else []
+  else if not (feasible start_point end_point steps) then
+    []
+  else
+    explore_paths start_point end_point [] steps
