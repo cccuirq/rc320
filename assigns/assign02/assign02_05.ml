@@ -45,95 +45,40 @@ type point = {
   x : int ;
   y : int ;
 }
-    let move point dir =
-      match dir with
-      | N -> { point with y = point.y + 1 }
-      | S -> { point with y = point.y - 1 }
-      | E -> { point with x = point.x + 1 }
-      | W -> { point with x = point.x - 1 }
-    
-    (* let rec add_to_end lst x = 
-      match lst with
-      | [] -> [x]
-      | h::t -> h :: add_to_end t x
-    
-    let rec all_paths len start_point end_point =
-      if len = 0 then
-        if start_point = end_point then [[]] else []
-      else if len = 1 then
-        []
-      else
-        let directions = [N; S; E; W] in
-        let rec explore_paths current_p remaining len =
-          if len = 0 then
-            if current_p = end_point then [remaining] else []
-          else
-            explore_directions directions current_p remaining len
-        and explore_directions dirs current_point remaining len =
-          match dirs with
-          | [] -> []
-          | dir::rest ->
-            let next_point = move current_point dir in
-            let next_path = (dir, 1) :: remaining in
-            let next_paths = explore_paths next_point next_path (len - 1) in
-            next_paths @ explore_directions rest current_point remaining len
-        in
-        explore_paths start_point [] len *)
+  let rec check_valid path =
+    match path with
+    | (dir1, dis1) :: (dir2, dis2) :: rest when dir1 = dir2 -> check_valid ((dir1, dis1 + dis2) :: rest)  (* Combine consecutive moves in the same direction *)
+    | head :: rest -> head :: check_valid rest  (* Keep the head and process the rest *)
+    | [] -> []
 
-        let rec add_to_end lst x =
-          match lst with
-          | [] -> [x]
-          | h :: t -> h :: add_to_end t x
-        
-        let feasible stp endp steps =
-          let dist = abs(stp.x - endp.x) + abs(stp.y - endp.y) in
-          dist <= steps && (steps - dist) mod 2 = 0
-        
-        (* let rec all_paths steps start_point end_point =
-          if steps = 0 then
-            if start_point = end_point then [[]] else []
-          else if not (feasible start_point end_point steps) then
-            []
-          else
-            let directions = [N; S; E; W] in
-            let rec explore_paths current_point path_remaining steps =
-              if steps = 0 then
-                if current_point = end_point then [List.rev path_remaining] else []
-              else
-                List.concat (List.map (fun dir ->
-                  let next_point = move current_point dir in
-                  if feasible next_point end_point (steps - 1) then
-                    let next_step = (dir, 1) in
-                    explore_paths next_point (next_step :: path_remaining) (steps - 1)
-                  else
-                    []
-                ) directions)
-            in
-            explore_paths start_point [] steps *)
+let rec add_to_end paths = 
+  match paths with
+  | [] -> []
+  | h::t -> check_valid h :: add_to_end t
 
-let rec explore_paths current_point end_point path_remaining steps =
-  if steps = 0 then
-    if current_point = end_point then [path_remaining] else []
-  else
-    let directions = [N; S; E; W] in
-    explore_and_concat directions current_point end_point path_remaining steps []
+  let rec list_each_add item l =
+    match l with 
+    | [] -> []
+    | [] :: rest -> list_each_add item rest
+    | path :: rest ->
+      let new_current =  item :: path in
+      new_current :: (list_each_add item rest )
 
-and explore_and_concat directions current_point end_point path_remaining steps acc =
-  match directions with
-  | [] -> acc
-  | dir :: rest ->
-    let next_point = move current_point dir in
-    if feasible next_point end_point (steps - 1) then
-      let next_step = (dir, 1) in
-      let new_paths = explore_paths next_point end_point (add_to_end path_remaining next_step) (steps - 1) in
-      explore_and_concat rest current_point end_point path_remaining steps (acc @ new_paths)
+  let rec all_paths len start dst =
+    let only_one start dst = 
+      if start.x - dst.x = 1 && start.y = dst.y then [[(W, 1)]]
+      else if dst.x - start.x = 1 && start.y = dst.y then [[(E, 1)]]
+      else if start.y - dst.y = 1 && start.x = dst.x then [[(S, 1)]]
+      else if dst.y - start.y = 1 && start.x = dst.x then [[(N, 1)]]
+      else []
+    in
+    if len = 0 then
+      [[]]
+    else if len = 1 then
+      only_one start dst
     else
-      explore_and_concat rest current_point end_point path_remaining steps acc
-
-let all_paths steps start_point end_point =
-  if steps = 0 then
-    if start_point = end_point then [[]] else []
-  else if not (feasible start_point end_point steps) then
-    []
-  else
-    explore_paths start_point end_point [] steps
+      let n_paths = add_to_end (list_each_add (N, 1) (all_paths (len-1) {x = start.x; y = start.y+1} dst)) in
+      let s_paths = add_to_end (list_each_add (S, 1) (all_paths (len-1) {x = start.x; y = start.y-1} dst)) in
+      let w_paths = add_to_end (list_each_add (W, 1) (all_paths (len-1) {x = start.x-1; y = start.y} dst)) in
+      let e_paths = add_to_end (list_each_add (E, 1) (all_paths (len-1) {x = start.x+1; y = start.y} dst)) in
+      n_paths @ s_paths @ w_paths @ e_paths
