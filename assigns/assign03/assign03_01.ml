@@ -26,4 +26,21 @@ type 'a concatlist
   | Concat of 'a concatlist * 'a concatlist
 
 let sort (l : 'a concatlist) : 'a list =
-  assert false (* TODO *)
+  let rec sort_addend x curr = 
+    match curr with
+    | [] -> [x] 
+    | h :: t ->
+        if x <= h then
+          x :: curr 
+        else
+          h :: (sort_addend x t)  
+ in
+  let rec helper l my = 
+    match l with
+      | Nil -> my
+      | Single x -> helper Nil (sort_addend x my)
+      | Concat (left, right) -> 
+        let le = helper left my in 
+        helper right le
+  in 
+  helper l []
