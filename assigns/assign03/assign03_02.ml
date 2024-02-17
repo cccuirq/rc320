@@ -43,4 +43,17 @@ type 'a forklist
   | Fork of 'a * 'a forklist * 'a forklist
 
 let delay_cons (f : int forklist) : int forklist =
-  assert false (* TODO *)
+  let rec insert x f =
+    match f with
+    |Nil -> Cons(x, Nil)
+    |Cons(x1, xs)-> if x < x1 then Cons(x, f)
+                    else Cons(x1, insert x f)
+    |Fork(x1, xs1, xs2) -> if x < x1 then Fork(x1, insert x xs1, xs2)
+                            else Fork(x1, xs1, insert x xs2)
+  in
+  let rec help f = 
+    match f with
+    |Nil -> Nil
+    |Cons (x1, x2) -> insert x1 (help x2)
+    |Fork (x1, x2, x3) -> Fork (x1, help x2, help x3)
+  in help f
