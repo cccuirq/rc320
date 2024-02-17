@@ -141,11 +141,12 @@ let transpose (m : 'a matrix) : 'a matrix =
     else []
   in{num_rows = m.num_cols; num_cols = m.num_rows; rows = helper m.rows m.num_cols 0}
 let multiply (m : float matrix) (n : float matrix) : (float matrix, error) result =
-  if m.num_cols <> n.num_rows then Error MulMismatch
+  (* if m.num_cols <> n.num_rows then Error MulMismatch
   else
     let rec dot_product row col =
       match row, col with
       | [], [] -> 0.
       | h1 :: t1, h2 :: t2 -> h1 *. h2 +. dot_product t1 t2
       | _, _ -> failwith "Mismatched lengths" 
-    
+     *)
+     assert false
