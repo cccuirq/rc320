@@ -116,10 +116,36 @@ type 'a matrix = {
 }
 
 let mkMatrix (rs : 'a list list) : ('a matrix, error) result =
-  assert false (* TODO *)
-
+  match rs with
+  | [] -> Error ZeroRows
+  | h :: t ->
+      let row_length = List.length h in
+      if row_length = 0 then Error ZeroCols
+      else
+        let rec check_rows rows acc =
+          match rows with
+          | [] -> Ok { num_rows = List.length acc; num_cols = row_length; rows = acc }
+          | h :: t ->
+              if List.length h <> row_length then Error UnevenRows
+              else check_rows t (acc @ [h])
+        in
+        check_rows t [h]
 let transpose (m : 'a matrix) : 'a matrix =
-  assert false (* TODO *)
-
+  let rec help rows i =
+    match rows with
+    |[] ->[]
+    |h :: t->(List.nth h i) :: (help t i)
+  in
+  let rec helper rows num_cols i = 
+    if i < num_cols then help rows i::helper rows num_cols (i+1)
+    else []
+  in{num_rows = m.num_cols; num_cols = m.num_rows; rows = helper m.rows m.num_cols 0}
 let multiply (m : float matrix) (n : float matrix) : (float matrix, error) result =
-  assert false (* TODO *)
+  if m.num_cols <> n.num_rows then Error MulMismatch
+  else
+    let rec dot_product row col =
+      match row, col with
+      | [], [] -> 0.
+      | h1 :: t1, h2 :: t2 -> h1 *. h2 +. dot_product t1 t2
+      | _, _ -> failwith "Mismatched lengths" 
+    
