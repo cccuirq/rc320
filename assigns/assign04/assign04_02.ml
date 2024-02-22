@@ -48,9 +48,21 @@
    let _ = assert (walks g2 4 [(p1, -10); (p2, -20); (p3, 8)] = [-6; -24])
    let _ = assert (walks g2 6 [(p1, 5); (p2, 11); (p3, -10)] = [2])
 *)
+let rec make_path p x len = 
+  if len <= 0 then [x]
+  else x :: make_path p (p x) (len - 1)
+
+let rec check g path = 
+  match path with
+  | [] -> true
+  | x :: [] -> true
+  | x :: (y :: rest) -> g x y && check g rest
 
 let walks
     (g : 'a -> 'a -> bool)
     (len : int)
     (paths_starts : (('a -> 'a) * 'a) list) : 'a list =
-  assert false (* TODO *)
+  paths_starts
+  |> List.map(fun (p, start) -> make_path p start (max 0 len))
+  |> List.filter(check g)
+  |> List.map (fun path -> List.nth path (List.length path - 1))

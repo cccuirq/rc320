@@ -79,7 +79,11 @@
 *)
 
 let rec map2 (f : 'a -> 'b -> 'c) (l : 'a list) (r : 'b list) : 'c list =
-  assert false (* TODO *)
+  match l, r with
+  |[], [] -> []
+  |[], y :: ys -> []
+  |x :: xs, [] -> []
+  |x :: xs, y :: ys -> f x y :: map2 f xs ys
 
 let consecutives (len : int) (l : 'a list) : 'a list list =
   assert false (* TODO *)
