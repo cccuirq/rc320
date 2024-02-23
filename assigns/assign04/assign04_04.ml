@@ -80,13 +80,26 @@
 
 let rec map2 (f : 'a -> 'b -> 'c) (l : 'a list) (r : 'b list) : 'c list =
   match l, r with
-  |[], [] -> []
-  |[], y :: ys -> []
-  |x :: xs, [] -> []
-  |x :: xs, y :: ys -> f x y :: map2 f xs ys
+  | [], _ | _, [] -> [] 
+  | x :: xs, y :: ys -> f x y :: map2 f xs ys
 
 let consecutives (len : int) (l : 'a list) : 'a list list =
-  assert false (* TODO *)
+  let rec make len x newl =
+    if len <= 0 then List.rev newl
+    else 
+      (match x with
+      | [] -> List.rev newl
+      | hd::tl -> make (len-1) tl (hd::newl))
+  in
+  let rec loop_list list new_list =
+    match list with
+    | [] -> List.rev new_list
+    | hd::tl -> 
+      if (List.length list) < len then new_list
+      else loop_list tl ((make len list [])::new_list)
+  in
+  if (List.length l) <= len then [l]
+  else loop_list l []
 
 let list_conv
     (f : 'a list -> 'b list -> 'c)
@@ -95,9 +108,15 @@ let list_conv
   List.map (f l) (consecutives (List.length l) r)
 
 let poly_mult_helper (u : int list) (v : int list) : int =
-  assert false (* TODO *)
+  let rec dot_product a b =
+    match a,b with 
+    | [], []-> 0
+    | h1::t1, h2::t2 -> (h1 * h2) + dot_product t1 t2
+    | _, _ -> failwith "Dot product, wrong sizes"
+  in 
+  dot_product u (List.rev v)
 
 let poly_mult (p : int list) (q : int list) : int list =
   let padding = List.init (List.length p - 1) (fun _ -> 0) in
   let padded_q = padding @ q @ padding in
-  list_conv poly_mult_helper p padded_q
+  List.rev(list_conv poly_mult_helper p padded_q)
