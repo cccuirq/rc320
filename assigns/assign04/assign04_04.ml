@@ -92,8 +92,8 @@ let consecutives (len : int) (l : 'a list) : 'a list list =
   let rec form start n list = 
     match list with
     | [] -> []
-    | x :: xs when start > 0 -> form (start - 1) n list
-    | x :: xs when n > 0 -> x :: form start (n-1) list
+    | x :: xs when start > 0 -> form (start - 1) n xs
+    | x :: xs when n > 0 -> x :: form start (n-1) xs
     | _ -> []
 
   in
@@ -118,6 +118,10 @@ let consecutives (len : int) (l : 'a list) : 'a list list =
       )
     in helper l l ((min len (List.length l))-1) [] [] (min len (List.length l)) *)
 
+    let _ = assert (consecutives 2 [1;2;3;4;5] = [[1;2];[2;3];[3;4];[4;5]])
+    let _ = assert (consecutives 1 [] = [[]])
+    let _ = assert (consecutives 10 [1;2;3;4;5] = [[1;2;3;4;5]])
+
 let list_conv
     (f : 'a list -> 'b list -> 'c)
     (l : 'a list)
@@ -133,3 +137,7 @@ let poly_mult (p : int list) (q : int list) : int list =
   let padding = List.init (List.length p - 1) (fun _ -> 0) in
   let padded_q = padding @ q @ padding in
   list_conv poly_mult_helper p padded_q
+
+  (* let _ = assert (poly_mult [1;2;3] [4;5] = [4;13;22;15])
+  let _ = assert (poly_mult [4;5] [1;2;3] = [4;13;22;15])
+  ( 1 + 2x + 3x^2 ) ( 4 + 5x ) = 4 + 13x + 22x^2 + 15x^3 *)
