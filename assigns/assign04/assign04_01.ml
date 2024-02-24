@@ -32,6 +32,7 @@ let apply_cycle (funcs : ('a -> 'a) list) (n : int) (x : 'a) : 'a =
   let m = max n 0 in
   let rec help acc i =
     if i <= 0 then acc
+    else if List.length funcs = 0 then acc
     else help ((List.nth funcs ((i-1) mod List.length funcs)) :: acc) (i-1)
   in
   let helper = help [] m in

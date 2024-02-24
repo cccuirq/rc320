@@ -84,22 +84,27 @@ let rec map2 (f : 'a -> 'b -> 'c) (l : 'a list) (r : 'b list) : 'c list =
   | x :: xs, y :: ys -> f x y :: map2 f xs ys
 
 let consecutives (len : int) (l : 'a list) : 'a list list =
-  let rec make len x newl =
-    if len <= 0 then List.rev newl
-    else 
-      (match x with
-      | [] -> List.rev newl
-      | hd::tl -> make (len-1) tl (hd::newl))
+  let rec range x y = 
+    if x >= y then []
+    else x :: range (x+1) y
   in
-  let rec loop_list list new_list =
+  let rec form start n list = 
     match list with
-    | [] -> List.rev new_list
-    | hd::tl -> 
-      if (List.length list) < len then new_list
-      else loop_list tl ((make len list [])::new_list)
+    | [] -> []
+    | x :: xs when start > 0 -> form (start - 1) n list
+    | x :: xs when n > 0 -> x :: form start (n-1) list
+    | _ -> []
+
   in
-  if (List.length l) <= len then [l]
-  else loop_list l []
+  let rec delete count list =
+    match count, list with
+    | _ , [] -> []
+    | 0 , _ -> []
+    | _ , x :: xs -> if count > 0 then x :: (delete (count-1) xs)
+    else []
+  in
+  if l = [] || len = 0 then [[]]
+  else delete ((List.length l) - (min len (List.length l)) + 1)(List.map (fun x -> form x (min len (List.length l)) l)(range 0 (List.length l)))
 
 let list_conv
     (f : 'a list -> 'b list -> 'c)
@@ -108,15 +113,11 @@ let list_conv
   List.map (f l) (consecutives (List.length l) r)
 
 let poly_mult_helper (u : int list) (v : int list) : int =
-  let rec dot_product a b =
-    match a,b with 
-    | [], []-> 0
-    | h1::t1, h2::t2 -> (h1 * h2) + dot_product t1 t2
-    | _, _ -> failwith "Dot product, wrong sizes"
-  in 
-  dot_product u (List.rev v)
+  let u = List.rev u in 
+  let sum = List.fold_left2 (fun acc x y -> acc + (x * y)) 0 u v in
+  sum
 
 let poly_mult (p : int list) (q : int list) : int list =
   let padding = List.init (List.length p - 1) (fun _ -> 0) in
   let padded_q = padding @ q @ padding in
-  List.rev(list_conv poly_mult_helper p padded_q)
+  list_conv poly_mult_helper p padded_q
