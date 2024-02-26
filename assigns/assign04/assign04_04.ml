@@ -106,21 +106,6 @@ let consecutives (len : int) (l : 'a list) : 'a list list =
   in
   if l = [] || len = 0 then [[]]
   else delete ((List.length l) - (min len (List.length l)) + 1)(List.map (fun x -> form x (min len (List.length l)) l)(range 0 (List.length l)))
-  (* if List.length l = 0 then [[]] else 
-    let rec helper list curr_list curr_len curr_acc acc start_len = 
-      match curr_list with 
-      | [] -> List.rev acc
-      | x :: xs -> ( 
-        if curr_len = 0 then 
-          helper (List.tl list) (List.tl list) (start_len-1) [] (List.rev (x :: curr_acc) :: acc) start_len
-        else 
-          helper list xs (curr_len-1) (x :: curr_acc) acc start_len
-      )
-    in helper l l ((min len (List.length l))-1) [] [] (min len (List.length l)) *)
-
-    let _ = assert (consecutives 2 [1;2;3;4;5] = [[1;2];[2;3];[3;4];[4;5]])
-    let _ = assert (consecutives 1 [] = [[]])
-    let _ = assert (consecutives 10 [1;2;3;4;5] = [[1;2;3;4;5]])
 
 let list_conv
     (f : 'a list -> 'b list -> 'c)
