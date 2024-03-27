@@ -71,6 +71,25 @@ let tokenize
    <expr> = <int> | ( <expr> )
 
 *)
+(* type token1 
+= LParT
+|RParT
+|AddT
+|Num of int
+
+let rec next_token1 (cs: char list) : (token1*char list) option =
+  match cs with
+  | ' ' :: rest -> next_token1 rest 
+  |'+' :: rest -> Some(AddT,rest)
+  | '(' :: rest -> Some (LParT, rest)
+  | ')' :: rest -> Some (RParT, rest)
+  | c :: rest when is_digit c ->
+    let num_str = take_while is_digit cs in
+    let rest = drop_while is_digit cs in
+    let num = int_of_string (implode num_str) in 
+    Some (Num num, rest)
+  | _ -> None *)
+
 
 type expr
   = Num of int

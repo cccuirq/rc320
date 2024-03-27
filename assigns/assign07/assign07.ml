@@ -105,8 +105,32 @@ type token
   | PdT             (* . *)
   | EOFT            (* end of file *)
 
-let next_token (cs : char list) : (token * char list) option =
-  assert false (* TODO *)
+
+let rec next_token (cs : char list) : (token * char list) option =
+  let is_valid_char c =
+    is_blank c || c = ':' || c = '.' || c = '<' || c = '>' || is_lower_case c in
+  match cs with
+  | ':'::':'::'=' :: rest -> Some (EqT, rest)
+  | '.' :: rest -> Some (PdT, rest)
+  | c :: rest when is_blank c -> next_token rest
+  | '<' :: rest ->
+    let ntm, remainder = span (fun c -> c <> '>') rest in
+    (match remainder with
+     | '>' :: rest' -> 
+      if List.exists (fun c -> not(is_lower_case c)) ntm then None
+      else Some (NtmT (implode ntm), rest')
+     | _ -> None)
+  | c :: rest when is_lower_case c-> 
+    let (tm, rest) = span is_alpha cs in
+    (match rest with
+     | [] -> Some (TmT (implode tm), [])
+     | r::rs -> 
+        if is_valid_char r
+        then Some (TmT (implode tm), rest)
+        else None)
+  | [] -> Some (EOFT, [])
+  | _ -> None
+
 
 let tokenize (s : string) : (token list) option =
   let rec go cs =
@@ -176,9 +200,11 @@ type sentform = symbol list
 type rule = string * sentform
 type grammar = rule list
 
-let expand_leftmost ((nt, sf) : rule) (s : sentform) : sentform =
-  assert false (* TODO *)
-
+let rec expand_leftmost ((nt, sf) : rule) (s : sentform) : sentform =
+  match s with
+  | NT symbol :: tail ->  sf @ tail
+  | head :: tail -> head :: expand_leftmost (nt, sf) tail
+  |[] -> []
 (* <a> ::= a<a>. *)
 let r = "a", [T "a"; NT "a"]
 
@@ -217,13 +243,36 @@ let _ = assert (expand_leftmost r [NT "a"; T "b"; NT "a"] = [T "a"; NT "a"; T "b
 *)
 
 let rec parse_sentform (ts : token list) : (sentform * token list) option =
-  assert false (* TODO *)
+ match ts with
+ | TmT token :: rest ->  
+    let (sf, remaining) = 
+      match parse_sentform rest with
+      | Some (sf, remaining) -> (sf, remaining)
+      | None -> ([], rest)
+    in Some (T token :: sf, remaining)
+ | NtmT token :: rest -> 
+    let (sf, remaining) = 
+      match parse_sentform rest with
+      | Some (sf, remaining) -> (sf, remaining)
+      | None -> ([], rest)
+    in Some (NT token :: sf, remaining)
+  | _ -> None
 
 let parse_rule (ts : token list) : (rule * token list) option =
-  assert false (* TODO *)
+  match ts with
+  | NtmT nt :: EqT :: rest ->
+      (match parse_sentform rest with
+      | Some (sf, PdT :: remaining) -> Some ((nt, sf), remaining)
+      | _ -> None
+      )
+  | _ -> None
 
 let rec parse_grammar (ts : token list) : grammar * token list =
-  assert false (* TODO *)
+  match parse_rule ts with
+  | Some (rule, remaining) -> 
+      let (rules, final) = parse_grammar remaining in
+      (rule :: rules, final)
+  | None -> ([], ts)
 
 let parse_and_check (s : string) : grammar option =
   match tokenize s with
