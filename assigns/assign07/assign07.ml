@@ -152,6 +152,7 @@ let _ = assert(next_token (explode "...") = Some (PdT, explode ".."))
 let _ = assert(next_token (explode " \n \t \r   ") = Some (EOFT, []))
 let _ = assert(next_token (explode "<not-good>") = None)
 
+
 let _ = assert(tokenize "..::=" = Some [PdT;PdT;EqT])
 let _ = assert(tokenize "<a> ::= aab a<b>a." = Some [NtmT "a"; EqT; TmT "aab"; TmT "a"; NtmT "b"; TmT "a"; PdT])
 let _ = assert(tokenize "<a> ::= aab a<no-good>a." = None)
@@ -283,12 +284,21 @@ let parse_and_check (s : string) : grammar option =
     then Some g
     else None
 
-(*
-let _ = assert (parse_sentform [NtmT "a"; TmT "b"; NtmT "a"; PdT; PdT; PdT] = Some ([NT "a"; T "b"; NT "a"], [PdT; PdT; PdT]))
+
+(* let _ = assert (parse_sentform [NtmT "a"; TmT "b"; NtmT "a"; PdT; PdT; PdT] = Some ([NT "a"; T "b"; NT "a"], [PdT; PdT; PdT]))
 let _ = assert (parse_sentform [PdT; PdT; PdT] = None)
+let _ = assert (parse_rule [NtmT "a"; EqT; TmT "a"; NtmT "a";PdT; NtmT "a"; EqT; NtmT "a"; PdT; PdT] = Some (("a", [T "a"; NT "a"]), [NtmT "a"; EqT; NtmT "a"; PdT; PdT]))
+let _ = assert (parse_rule [NtmT "b"; EqT; TmT "c"; PdT] = Some (("b", [T "c"]), []))
+let _ = assert (parse_rule [NtmT "c"; EqT; TmT "d"; NtmT "e"] = None)
+let _ = assert (parse_rule [NtmT "d"; EqT; TmT "e"; NtmT "f"; PdT; NtmT "g"; EqT; TmT "h"; PdT] = Some (("d", [T "e"; NT "f"]), [NtmT "g"; EqT; TmT "h"; PdT]))
+let _ = assert (parse_rule [NtmT "e"; EqT; TmT "f"; NtmT "g"; TmT "h"; NtmT "i"; PdT] = Some (("e", [T "f"; NT "g"; T "h"; NT "i"]), []))
+let _ = assert (parse_rule [EqT; NtmT "j"; TmT "k"; PdT] = None)
+let _ = assert (parse_rule [NtmT "f"; EqT; TmT "g"; NtmT "h"; PdT; PdT; PdT] = Some (("f", [T "g"; NT "h"]), [PdT; PdT]))
+let _ = assert (parse_rule [] = None)
+let _ = assert (parse_rule [NtmT "g"; EqT; TmT "i"; NtmT "j"; NtmT "k"; EqT; TmT "l"; PdT] = None)
 let _ = assert (parse_rule [NtmT "a"; EqT; TmT "a"; NtmT "a"; PdT; PdT; PdT] = Some (("a", [T "a"; NT "a"]), [PdT; PdT]))
-let _ = assert (parse_rule [NtmT "a"; EqT; TmT "a"; NtmT "a"; NtmT "a"; EqT; NtmT "a"] = None)
-*)
+let _ = assert (parse_rule [NtmT "a"; EqT; TmT "a"; NtmT "a"; NtmT "a"; EqT; NtmT "a"] = None) *)
+
 
 let simple_test = "
   <a> ::= a <a> a b .
@@ -320,9 +330,9 @@ let simple_test_missing_period = "
   <c> ::= g .
 "
 
-(*
+(* 
 let _ = assert (parse_and_check simple_test = Some simple_test_out)
 let _ = assert (parse_and_check simple_test_missing_period = None)
-*)
+ *)
 
 (* END OF PROBLEM 3 *)
