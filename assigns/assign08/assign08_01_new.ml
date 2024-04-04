@@ -240,10 +240,10 @@ let parse_symbol : symbol parser = (* TODO *)
 (* A complex symbol is given by the following grammar:
 
    <symbols>         ::= <symbol> { <symbol> } | EMPTY
-   <alt-symbol-list> ::= <symbol> { '|' <symbols> }
-   <symbol-complex> ::= '{' <alt-symbol-list> '}'
-                      | '[' <alt-symbol-list> '}'
-                      | <symbol>
+   <alt-symbol-list> ::= <symbols> { '|' <symbols> }
+   <symbol-complex>  ::= '{' <alt-symbol-list> '}'
+                       | '[' <alt-symbol-list> ']'
+                       | <symbol>
 
    Note that this implies there cannot be a repetitions or optionals
    within other repetitions or optionals.
