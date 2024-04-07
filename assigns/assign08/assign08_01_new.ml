@@ -185,8 +185,8 @@ type grammars = grammar list
    For testing purposes, you SHOULD NOT consume whitespace before or
    after a grammar identifier.
 *)
-let parse_g_ident : string parser = (* TODO *)
-  assert false
+let parse_g_ident : string parser = 
+  map implode (many1 (satisfy is_upper_case))
 
 (* A terminal symbol is ANY sequence of characters between two single
    quotes, e.g.,
@@ -201,7 +201,9 @@ let parse_g_ident : string parser = (* TODO *)
 
 *)
 let parse_term : symbol parser = (* TODO *)
-  assert false
+  (char '\'') >>
+  (many (satisfy ((<>) '\'')) >|= implode) <<
+  (char '\'') >|= fun x -> T x
 
 (* A nonterminal symbols is given by the following grammar:
 
@@ -223,7 +225,18 @@ let parse_term : symbol parser = (* TODO *)
 
 *)
 let parse_nonterm : symbol parser = (* TODO *)
-  assert false
+  let gident = parse_g_ident << char '.' in
+  let lower = many1 (satisfy is_lower_case) in
+  let rest = map2 (fun x xs -> x :: xs) (char '-') lower in
+  let cs = map2 (fun xs xss -> List.concat (xs :: xss)) lower (many rest) in
+  let nonterm = char '<' >> cs << char '>' >|= implode in
+  let gident_optional = optional (gident) in
+    map2 (fun g_opt nt_id ->
+          match g_opt with
+          | Some g -> NTRef(g, nt_id)
+          | None -> NT(nt_id)
+        ) gident_optional nonterm
+
 
 (* `parse_symbol` parses either a terminal, a nonterminal symbol or a
    nonterminal reference.
@@ -235,7 +248,7 @@ let parse_nonterm : symbol parser = (* TODO *)
 
 *)
 let parse_symbol : symbol parser = (* TODO *)
-  assert false
+  parse_term <|> parse_nonterm
 
 (* A complex symbol is given by the following grammar:
 
@@ -244,7 +257,7 @@ let parse_symbol : symbol parser = (* TODO *)
    <symbol-complex>  ::= '{' <alt-symbol-list> '}'
                        | '[' <alt-symbol-list> ']'
                        | <symbol>
-
+(*abc | c | g*)
    Note that this implies there cannot be a repetitions or optionals
    within other repetitions or optionals.
 
@@ -253,7 +266,15 @@ let parse_symbol : symbol parser = (* TODO *)
 
 *)
 let parse_symbol_complex : symbol_complex parser =
-  assert false
+  let parse_symbols = (many1 (parse_symbol << ws)) <|>
+    (keyword "EMPTY" >| [])in
+  let parse_alt = map2 (fun x xs -> x :: xs) parse_symbols
+    (many ((keyword "|") >> parse_symbols)) in
+      let parse_repetition = char '{' >> (ws >> parse_alt) << char '}' >|= fun x -> Rep x in
+      let parse_optional = char '[' >> (ws >> parse_alt) << char ']' >|= fun x -> Opt x in
+      let parse_single_symbol = parse_symbol >|= fun x -> Sym x in
+      parse_repetition <|> parse_optional <|> parse_single_symbol
+
 
 (* A sentential form is given by the following grammar:
 
@@ -268,7 +289,8 @@ let parse_symbol_complex : symbol_complex parser =
 
 *)
 let parse_sentform : sentform parser = (* TODO *)
-  assert false
+  (many1 (parse_symbol_complex << ws)) <|>
+  (keyword "EMPTY" >| [])
 
 (* A rule is given by the following grammar:
 
@@ -282,8 +304,25 @@ let parse_sentform : sentform parser = (* TODO *)
    rule, but you SHOULD consume whitespace after a rule.
 
 *)
+
+let ident_of (s : symbol) : nt_ident =
+  match s with
+  | T id -> id
+  | NT id -> id
+  | NTRef (a, b) -> b
+
+let parse_alt : sentform list parser = (* TODO *)
+  map2
+    (fun x xs -> x :: xs)
+    parse_sentform
+    (many ((keyword "|") >> parse_sentform))
+
 let parse_rule : rule list parser = (* TODO *)
-  assert false
+map2
+    (fun nt sfs -> List.map (fun sf -> nt, sf) sfs)
+    (keyword "RULE" >> (ws >> parse_nonterm << ws << keyword "::=") >|= ident_of)
+    (parse_alt)
+
 
 (* A grammar is given by the following grammar:
 
@@ -293,7 +332,11 @@ let parse_rule : rule list parser = (* TODO *)
    grammar, but you SHOULD consume whitespace and after a grammar.
 *)
 let parse_grammar : grammar parser = (* TODO *)
-  assert false
+  ws >>
+  let* g_id = keyword "BEGIN" >> parse_g_ident << ws in
+  let* rules = many (parse_rule << ws) in
+  let pend = keyword "END" >> pure() in
+  pend >> pure (g_id, List.flatten rules)
 
 (* A collection grammars is given by the following grammar:
 
@@ -304,7 +347,7 @@ let parse_grammar : grammar parser = (* TODO *)
 
 *)
 let parse_grammars : grammars parser = (* TODO *)
-  assert false
+  ws >> many (parse_grammar << ws)
 
 (* UNCOMMENT AS YOU COMPLETE THE ASSIGNMENT
 (* TEST CASES *)

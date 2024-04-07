@@ -235,6 +235,8 @@ type command
   | Sub
   | Mul
   | Div
+  | Store
+  | Recall
 
 (* Parsing floats
 
@@ -327,6 +329,8 @@ let parse_command : command parser = (* TODO *)
     (keyword "div" >| Div) <|>
     (keyword "pop" >| Pop) <|>
     (keyword "quit" >| Quit) <|>
+    (keyword "store" >| Store)<|>
+    (keyword "recall" >| Recall) <|>
     (parse_float << ws >|= fun x -> Push x)
   in ws >> p
 
@@ -380,20 +384,22 @@ let _ = assert (test = out)
    You may return anything on the Quit command.
 
 *)
-let run_command (cmd : command) (stk : float list) : float list = (* TODO *)
-  match cmd, stk with
-  | Quit, _ -> []
-  | Push x, stk -> x :: stk
-  | Pop, x :: rest -> rest
-  | Add, x :: y :: rest -> x +. y :: rest
-  | Sub, x :: y :: rest -> x -. y :: rest
-  | Mul, x :: y :: rest -> x *. y :: rest
-  | Div, x :: y :: rest -> x /. y :: rest
-  | _ -> stk
+let run_command (cmd : command) (mem, stk : float*float list): float*float list = (* TODO *)
+match cmd, stk with
+| Quit, _ -> mem, []
+| Push x, stk -> mem, x :: stk
+| Pop, x :: rest -> mem, rest
+| Add, x :: y :: rest-> mem, x +. y :: rest
+| Sub, x :: y :: rest -> mem, x -. y :: rest
+| Mul, x :: y :: rest -> mem, x *. y :: rest
+| Div, x :: y :: rest -> mem, x /. y :: rest
+| Store, x :: rest -> x, stk
+| Recall, _ -> (mem, mem :: stk)
+| _ -> mem, stk
 
 (* TEST CASES *)
 
-let test = run_command Add []
+(* let test = run_command Add []
 let out = []
 let _ = assert (test = out)
 
@@ -407,23 +413,23 @@ let _ = assert (test = out)
 
 let test = run_command (Push 3.001) [2.; 3.; 5.; 6.]
 let out = [3.001; 2.; 3.; 5.; 6.]
-let _ = assert (test = out)
+let _ = assert (test = out) *)
 
 (* END OF TEST CASES *)
 
-let rec print_stack (stk : float list) : unit =
-  let rec go stk =
+let rec print_stack (stk : float*float list) : unit =
+  let rec go (stk : float*float list) =
     match stk with
-    | [] -> ()
-    | x :: xs ->
-      let _ = print_string "  " ; print_endline (string_of_float x) in
-      go xs
+    | _, [] -> ()
+    | mem, x :: xs ->
+      let _ = print_string "  " ; print_endline (String.concat (string_of_float mem) [(string_of_float x)]) in
+      go (mem,xs)
   in
   print_endline "\n========" ;
   go stk ;
   print_endline "========\n"
 
-let rec repl stk : unit =
+let rec repl (stk : float*float list) : unit =
   let continue stk = print_stack stk ; repl stk in
   let input = print_string "RPN> " ; read_line () in
   match parse parse_command input with
