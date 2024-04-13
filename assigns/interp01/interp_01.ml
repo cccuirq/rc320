@@ -220,10 +220,151 @@ type value
 type env = (ident * value) list
 type trace = string list
 
-let update_env = assert false (* TODO *)
-let fetch_env = assert false (* TODO *)
-let eval_prog = assert false (* TODO *)
-let interp = assert false (* TODO *)
+let update_env e x v = 
+  let rec update acc = function
+    | [] -> List.rev ((x, v) :: acc)  
+    | (y, value) :: ys when y = x -> update acc ys  
+    | binding :: ys -> update (binding :: acc) ys 
+  in
+  update [] e 
+let rec fetch_env e x = 
+  match e with
+  | [] -> None
+  | (id, value) :: rest ->
+    if id = x then Some value
+    else fetch_env rest x 
+  
+let drop s e t p =
+  match s with
+  | _ :: s_tail -> (s_tail, e, t, p)
+  |[] -> ([], e, "panic: nothing to drop" :: t, [])
+  
+let swap s e t p =
+  match s with
+  | x :: y :: s_tail -> (y :: x :: s_tail, e, t, p)
+  | x :: [] -> ([x] , e, "panic: only one element in stack, can't swap" :: t, [])
+  | [] -> ([], e, "panic: nothing to swap" :: t, [])
+
+let duplicate s e t p =
+  match s with
+  | n :: s_tail -> (n :: n :: s_tail, e, t ,p)
+  | [] -> ([], e, "panic: nothing to duplicate"::t,[])
+
+let trace_cmd n s e t p =
+  (s,e, (string_of_int n) :: t,p)
+
+let push n s e t p = (n::s,e, t,p)
+
+let add s e t p =
+  match s with
+  |x::y::s_tail -> ((x+y)::s_tail,e, t, p)
+  |x :: [] -> ([x], e,"panic: only one can't add" :: t,[])
+  |[] -> ([],e, "panic: nothing to add" :: t, [])
+
+let subtract s e t p =
+  match s with
+  |x::y::s_tail -> ((x-y)::s_tail,e, t,p)
+  |x :: [] -> ([x],e, "panic: only one can't subtract" :: t, [])
+  |[] -> ([],e, "panic: nothing to subtract" :: t,[])
+
+let multiply s e t p =
+  match s with
+  |x::y::s_tail -> ((x*y)::s_tail,e, t,p)
+  |x :: [] -> ([x],e, "panic: only one can't multiply" :: t,[])
+  |[] -> ([], e,"panic: nothing to multiply" :: t,[])
+
+let divde s e t p =
+  match s with
+  |x :: y :: s_tail -> 
+    (match y with
+    |0 -> (x::0::s_tail,e, "panic: denominator 0" :: t,[])
+    | _ -> ((x/y) :: s_tail,e, t,p))
+  | x :: [] -> ([x], e,"panic: only one can't divide" :: t,[])
+  | [] -> ([], e,"panic: nothing to divide" :: t,[])
+
+let lessthan s e t p =
+  match s with
+  | x :: y :: s_tail -> 
+    (match (x < y) with
+    |true -> (1 :: s_tail, e,t,p)
+    |false -> (0 :: s_tail,e,t,p))
+  |x :: [] -> ([x], e,"panic: only one can't compare" :: t,[])
+  |[] -> ([], e,"panic: nothing to compare" :: t,[])
+
+let equals s e t p =
+  match s with
+  | x :: y :: s_tail -> 
+    (match (x = y) with
+    |true -> (1 :: s_tail,e, t,p)
+    |false -> (0 :: s_tail,e,t,p))
+  |x :: [] -> ([x], e,"panic: only one can't equal" :: t,[])
+  |[] -> ([], e,"panic: nothing to equal" :: t,[])
+  
+let varass id s e t p = 
+  match s with
+  | n :: s_tail -> 
+    let newenv = update_env e id (Num n) in
+    (s_tail, newenv, t, p)
+  | [] -> (s, e, "panic: empty stack for var" :: t, [])
+
+let varfetch id s e t p =
+  match fetch_env e id with
+  | Some (Num n) -> (n :: s, e, t, p)
+  | Some (Prog _) | None -> (s, e, "panic: fetch error" :: t, [])
+
+let def id prog s e t p =
+  (s, update_env e id (Prog prog), t, p)
+
+let call id s e t p =
+  match fetch_env e id with
+  | Some (Prog pr) -> (s, e,t, pr @ p)
+  | Some (Num _) | None -> (s, e, "panic: not program"::t, [])
+
+let ifs pr s e t p =
+  match s with
+  |0 :: s_tail -> (s_tail, e, t, p)
+  |n :: s_tail when n <> 0 -> (s_tail, e, t, pr @ p)
+  |[] -> ([], e, "panic: nothing to if"::t, [])
+  |_ -> failwith "should never happen"
+
+let eval_single_command cmd (stack, env, trace, prog) =
+  match cmd, stack with
+  | Drop, _ -> drop stack env trace prog
+  | Swap, _ -> swap stack env trace prog
+  | Dup, _ -> duplicate stack env trace prog
+  | Num n, _ -> push n stack env trace prog
+  | Trace, n :: s_tail -> trace_cmd n stack env trace prog
+  | Trace, [] -> (stack, env, "panic: empty stack on trace" :: trace,[])
+  | Add , _ -> add stack env trace prog
+  | Sub , _ -> subtract stack env trace prog
+  | Mul, _ -> multiply stack env trace prog
+  | Div, _ -> divde stack env trace prog
+  | Lt, _ -> lessthan stack env trace prog
+  | Eq, _ -> equals stack env trace prog
+  | Bind id, _ -> varass id stack env trace prog
+  | Ident id, _-> varfetch id stack env trace prog
+  | Def (id, subprog), _ -> def id subprog stack env trace prog
+  | Call id, _  -> call id stack env trace prog
+  | If pr, _ -> ifs pr stack env trace prog
+  (* | _ -> (stack, env, "panic: unimplemented command" :: trace, []) *)
+
+let rec eval_prog s e t p =
+  match p with
+  | [] -> t
+  | cmd :: cmds -> 
+    (let (new_stack, new_env, new_trace, new_prog) = 
+    eval_single_command cmd (s, e, t, cmds) in
+    eval_prog new_stack new_env new_trace new_prog)
+
+
+let interp input = 
+  match parse_prog input with
+  |Some prog -> 
+    (let is = [] in
+     let ie = [] in
+     let it = [] in
+     Some (eval_prog is ie it prog))
+  |None -> None
 
 (* END OF PROJECT CODE *)
 
@@ -240,8 +381,8 @@ let print_trace t =
       go t
   in go (List.rev t)
 
-(*
-let main () =
+
+(* let main () =
   let input =
     let rec get_input s =
       try
@@ -254,5 +395,27 @@ let main () =
   | None -> print_endline "Parse Error"
   | Some t -> print_trace t
 
-let _ = main ()
-*)
+let _ = main () *)
+
+let p = "
+def ISNEG
+0 swap <
+;
+def DECR
+1 swap -
+;
+def FACTORIAL
+dup #ISNEG ? drop 1 0 - ;
+dup 0 = ? drop 1 ;
+dup 1 < ?
+dup
+#DECR
+#FACTORIAL
+*
+;
+;
+4 #FACTORIAL ."
+
+(* let test = interp p
+let out = Some ["6"]
+let _ = assert(test = out) *)
