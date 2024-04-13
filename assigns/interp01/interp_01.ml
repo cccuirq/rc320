@@ -120,7 +120,23 @@ type command
   | Num of int             (* num *)
 and program = command list
 
-let parse_ident = fail (* TODO *)
+let parse_ident = 
+  ws >> many1 (satisfy is_upper_case) >>= fun id_chars ->
+  ws >> pure (implode id_chars)
+
+let parse_drop = ws >> (keyword "drop" << ws) >> pure Drop
+let parse_swap = ws >> (keyword "swap" << ws) >> pure Swap
+let parse_dup = ws >> (keyword "dup" << ws) >> pure Dup
+let parse_trace = ws >> (keyword "." << ws) >> pure Trace
+let parse_add = ws >> (keyword "+" << ws) >> pure Add
+let parse_sub = ws >> (keyword "-" << ws) >> pure Sub
+let parse_mul = ws >> (keyword "*" << ws) >> pure Mul
+let parse_div = ws >> (keyword "/" << ws) >> pure Div
+let parse_lt = ws >> (keyword "<" << ws) >> pure Lt
+let parse_eq = ws >> (keyword "=" << ws) >> pure Eq
+let parse_num =
+  ws >> many1 (satisfy is_digit) >>= fun digits ->
+  ws >> pure (Num (int_of_string (implode digits)))
 
 (* You are not required to used this but it may be useful in
    understanding how to use `rec_parser` *)
@@ -128,13 +144,30 @@ let rec parse_com () =
   let parse_def =
     map2
       (fun id p -> Def (id, p))
-      (keyword "def" >> parse_ident << ws)
-      (parse_prog_rec () << char ';')
-  in parse_def <|> fail (* TODO *)
+      (ws >> (keyword "def" >> parse_ident) << ws)
+      (parse_prog_rec() << char ';')
+  in
+  let parse_bind = 
+    ws >> keyword "|>" >> (parse_ident << ws) >>= fun id -> pure (Bind id)
+  in
+  let parse_call = 
+    ws >> keyword "#" >> (parse_ident << ws) >>= fun id -> pure (Call id)
+  in
+  let parse_if = 
+    ws >> keyword "?" >> parse_prog_rec() << char ';' >>= fun id -> pure (If id)
+  in
+  let parse_ident_command =
+    parse_ident >>= fun id -> pure (Ident id)
+  in
+  parse_def <|> parse_drop <|> parse_swap <|> parse_dup <|> parse_trace <|> parse_add
+  <|> parse_sub <|> parse_mul <|> parse_div <|> parse_lt <|> parse_eq
+  <|> parse_bind <|> parse_call <|> parse_if <|> parse_ident_command <|> parse_num
 and parse_prog_rec () =
   many ((rec_parser parse_com) << ws)
 
-let parse_prog = assert false (* TODO *)
+let parse_prog = 
+parse (many (parse_com ()) >>= fun commands ->
+pure commands)
 
 (* A VERY SMALL TEST SET *)
 (*
