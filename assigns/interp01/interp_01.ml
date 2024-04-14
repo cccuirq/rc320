@@ -398,23 +398,31 @@ let print_trace t =
 let _ = main () *)
 
 let p = "
-def ISNEG
-0 swap <
-;
 def DECR
-1 swap -
+  1 swap -
 ;
-def FACTORIAL
-dup #ISNEG ? drop 1 0 - ;
-dup 0 = ? drop 1 ;
+
+def HELP
 dup 1 < ?
-dup
-#DECR
-#FACTORIAL
-*
+    NEW |> PRE
+    OLD NEW + |> NEW
+    PRE |> OLD
+    #DECR
+    #HELP ;
 ;
-;
-4 #FACTORIAL ."
+
+def FIB
+  dup 0 = ? drop 0 ;
+  dup 1 = ? drop 1 ;
+  1 |> NEW
+  0 |> OLD
+  0 |> PRE
+  #HELP
+  drop NEW
+  ;
+
+
+6 #FIB ."
 
 (* let test = interp p
 let out = Some ["6"]

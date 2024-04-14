@@ -1,1 +1,25 @@
-def FIB ;
+def DECR
+  1 swap -
+;
+
+def HELP
+dup 1 < ?
+    NEW |> PRE
+    OLD NEW + |> NEW
+    PRE |> OLD
+    #DECR
+    #HELP ;
+;
+
+def FIB
+  dup 0 = ? drop 0 ;
+  dup 1 = ? drop 1 ;
+  1 |> NEW
+  0 |> OLD
+  0 |> PRE
+  #HELP
+  drop NEW
+  ;
+
+
+6 #FIB .
