@@ -186,9 +186,23 @@ let parse_debug =
 let ws = many (ws >> parse_comment) >> ws
 let keyword w = str w << ws
 
+let parse_add = ws >> (keyword "+" << ws) >> pure Add
+let parse_mul = ws >> (keyword "*" << ws) >> pure Mul
+let parse_div = ws >> (keyword "/" << ws) >> pure Div
+let parse_lt = ws >> (keyword "<" << ws) >> pure Lt
+let parse_eq = ws >> (keyword "=" << ws) >> pure Eq
+let parse_and = ws >> (keyword "&&" << ws) >> pure And
+let parse_or = ws >> (keyword "||" << ws) >> pure Or
+let parse_not = ws >> (keyword "~" << ws) >> pure Not
+let parse_call = ws >> (keyword "#" << ws) >> pure Call
+let parse_return = ws >> (keyword "Return" << ws) >> pure Return
+let parse_trace = ws >> (keyword "." << ws) >> pure Trace
+let parse_const = 
+  (ws >>
+  ((parse_int >|= fun i -> Num i) <|>
+  (parse_bool >|= fun b -> Bool b))
+   >|= fun id -> Push id) << ws
 let rec parse_com () =
-  let parse_fun = fail (* TODO *)
-  in
   let parse_if =
     let* _ = keyword "?" in
     let* ifc = parse_prog_rec () in
@@ -205,6 +219,12 @@ let rec parse_com () =
     let* _ = char ';' in
     pure (While (check, body))
   in
+  let parse_bind = 
+    ws >> keyword "|>" >> (parse_ident << ws) >>= fun id -> pure (Bind id)
+  in
+  let parse_fun =
+    ws >> keyword ":" >> parse_prog_rec () << char ';' >>= fun id -> pure (Fun id)
+  in
   choice
     (* TODO: Add more alternatives *)
     [ parse_fun
@@ -212,6 +232,19 @@ let rec parse_com () =
     ; parse_if
     ; parse_ident >|= (fun s -> Fetch s)
     ; parse_debug >|= (fun s -> Debug s)
+    ; parse_add
+    ; parse_mul
+    ; parse_div
+    ; parse_lt
+    ; parse_eq
+    ; parse_and
+    ; parse_or
+    ; parse_not
+    ; parse_call
+    ; parse_return
+    ; parse_bind
+    ; parse_const
+    ; parse_trace
     ]
 and parse_prog_rec () =
   many (rec_parser parse_com << ws)
@@ -221,19 +254,48 @@ let parse_prog = parse (ws >> parse_prog_rec ())
 (* FETCHING AND UPDATING *)
 
 (* fetch the value of `x` in the environment `e` *)
-let fetch_env e x = None (* TODO *)
-
-let rec update_env e x v = Global [] (* TODO *)
+let rec fetch_env e x = 
+  match e with
+  |Global b -> List.assoc_opt x b
+  |Local (record, env) ->
+    (match List.assoc_opt x record.local with
+    |Some v -> Some v
+    |None -> fetch_env env x) 
+let rec update_env e x v =
+  match e with
+  | Global bindings ->
+    Global (update_binding x v bindings)  (* Update the global scope directly if no locals exist *)
+  | Local (record, env) ->
+    if List.exists (fun (id, _) -> id = x) record.local then
+      (* If `x` is already bound locally, update it *)
+      Local ({record with local = update_binding x v record.local}, env)
+    else
+      (* If `x` is not bound locally, add new binding to the local scope *)
+      Local ({record with local = (x, v) :: record.local}, env)
+    (* Helper function to update or add a binding in a list of bindings *)
+and update_binding x v bindings =
+let found = List.exists (fun (id, _) -> id = x) bindings in
+  if found then
+    List.map (fun (id, value) -> if id = x then (id, v) else (id, value)) bindings
+  else
+    (x, v) :: bindings
 
 (* EVALUTION *)
 
 (* make the panic configuration given a configuration *)
 let panic (_, _, t, _) msg = [], Global [], ("panic: " ^ msg) :: t, []
 
-let eval_step (c : stack * env * trace * program) =
+let rec eval_step (c : stack * env * trace * program) =
   match c with
   (* Push *)
   | s, e, t, Push c :: p -> Const c :: s, e, t, p
+  | s, e, t, Fun q :: p ->
+    let new_closure = Clos {
+        def_id = local_id e;
+        captured = []; 
+        prog = q
+    } in
+    new_closure :: s, e, t, p
   (* Trace *)
   | v :: s, e, t, Trace :: p -> s, e, to_string v :: t, p
   | [], _, _, Trace :: _ -> panic c "stack underflow (. on empty)"
@@ -242,7 +304,84 @@ let eval_step (c : stack * env * trace * program) =
   | _ :: _ :: _, _, _, Add :: _ -> panic c "type error (+ on non-integers)"
   | _ :: [], _, _, Add :: _ -> panic c "stack underflow (+ on single)"
   | [], _, _, Add :: _ -> panic c "stack underflow (+ on empty)"
-  | _ -> assert false (* TODO *)
+  (* multiply *)
+  | Const (Num m) :: Const (Num n) :: s, e, t, Mul :: p -> Const (Num (m * n)) :: s, e, t, p
+  | _ :: _ :: _, _, _, Mul :: _ -> panic c "type error (* on non-integers)"
+  | _ :: [], _, _, Mul :: _ -> panic c "stack underflow (* on single)"
+  | [], _, _, Mul :: _ -> panic c "stack underflow (* on empty)"
+  (*divide*)
+  | Const (Num m) :: Const (Num n) :: s, e, t, Div :: p when n = 0 -> panic c "dominator 0 in /"
+  | Const (Num m) :: Const (Num n) :: s, e, t, Div :: p -> Const (Num (m / n)) :: s, e, t, p
+  | _ :: _ :: _, _, _, Div :: _ -> panic c "type error (/ on non-integers)"
+  | _ :: [], _, _, Div :: _ -> panic c "stack underflow (/ on single)"
+  | [], _, _, Div :: _ -> panic c "stack underflow (/ on empty)"
+  (*and*)
+  | Const (Bool m) :: Const (Bool n) :: s, e, t, And :: p ->  Const (Bool (m && n)) :: s, e, t, p
+  | _ :: _ :: _, _, _, And :: p -> panic c "type error (and on non-bool)"
+  | _ :: [], _, _, And :: _ -> panic c "stack underflow (and on single)"
+  | [], _, _, And :: _ -> panic c "stack underflow (and on empty)"
+  (*or*)
+  | Const (Bool m) :: Const (Bool n) :: s, e, t, Or :: p ->  Const (Bool (m || n)) :: s, e, t, p
+  | _ :: _ :: _, _, _, Or :: p -> panic c "type error (or on non-bool)"
+  | _ :: [], _, _, Or :: _ -> panic c "stack underflow (or on single)"
+  | [], _, _, Or :: _ -> panic c "stack underflow (or on empty)"
+  (*not*)
+  | Const (Bool m) :: s, e, t, Not :: p -> Const (Bool (not m)) :: s, e, t, p
+  | _ :: s, e, t, Not ::p -> panic c "type error (not on non_bool)"
+  | [], _, _, Not :: _ -> panic c "stack underflow (Not on empty)"
+  (*less than*)
+  | Const (Num m) :: Const (Num n) :: s, e, t, Lt ::p -> Const (Bool (m < n))::s, e,t,p
+  | _ :: _ :: _, _, _, Lt :: _ -> panic c "type error (less than on non-integers)"
+  | _ :: [], _, _, Lt :: _ -> panic c "stack underflow (< on single)"
+  | [], _, _, Lt :: _ -> panic c "stack underflow (< on empty)"
+  (*equals*)
+  | Const (Num m) :: Const (Num n) :: s, e, t, Eq ::p -> Const (Bool (m = n))::s, e,t,p
+  | _ :: _ :: _, _, _, Eq :: _ -> panic c "type error (less than on non-integers)"
+  | _ :: [], _, _, Eq :: _ -> panic c "stack underflow (< on single)"
+  | [], _, _, Eq :: _ -> panic c "stack underflow (< on empty)"
+  (*if-else*)
+  | Const (Bool true) :: s, e, t, If (q1, q2) :: p -> s, e, t, q1 @ p
+  | Const (Bool false) :: s, e, t, If (q1, q2) :: p -> s, e, t, q2 @ p 
+  | Const _ :: _, _, _, If (q1, q2) :: _ -> panic c "type error (not bool)"
+  | [], _, _, If (q1, q2) :: _ -> panic c "stack underflow (ifelse on empty)"
+  (*while *)
+  | s, e, t, While (q1, q2) :: p -> s, e, t, q1 @ [If (q2 @ [While (q1, q2)], [])] @ p
+  (*Fetch*)
+  | s, e, t, Fetch id :: p ->
+    (match fetch_env e id with
+    | Some v -> (v::s, e, t, p)
+    | None -> panic c "fetch nothing")
+  (*Bind*)
+  | v :: s, e, t, Bind x :: p -> s, update_env e x v, t, p
+  | [], e, t, Bind x ::p -> panic c ("bind nothing")
+  (*Call*)
+  | Clos {def_id; captured; prog} :: s, e, t, Call :: p ->
+    let new_record = { id = def_id; local = captured; called_def_id = def_id; return_prog = p } in
+    s, Local (new_record, e), t, prog
+  | _, _, _, Call :: _ -> panic c "Function call expected a closure on the stack"
+  (*return*)
+  | stck, Local ({id; local; called_def_id; return_prog}, env2), t, Return :: p ->
+    (match stck with
+    | Clos {def_id; captured; prog} :: [] ->
+      if def_id = id then
+        let merge_bind = 
+          local @ captured
+        in
+        let new_clo = Clos {def_id = id; captured = merge_bind; prog = prog}
+      in
+      (new_clo::[]), env2, t, return_prog
+    else
+      stck, env2, t, return_prog
+    |x :: [] ->
+      (x ::[], env2, t, return_prog)
+    |[] ->
+      ([], env2, t, return_prog)
+    |x::y::s -> panic c "more in stack")
+  |stck, Local ({id; local; called_def_id; return_prog}, env2), t, []->
+    (match stck with
+    | []-> ([], env2, t, return_prog)
+    | x::s -> panic c "stck not emp, prog emp")
+  | _ -> assert false (* other commands *)
 
 let rec eval c =
   match c with
@@ -276,6 +415,19 @@ let main () =
   | None -> print_endline "Parse Error"
   | Some t -> print_trace t
 
+let p = "(f):
+0 |> x
+(g):
+  (h):
+    x .
+  ;
+  Return
+; #
+Return
+; |> f
+
+f # |> g
+g #"
 (* let _ = main () *)
 
 (* END OF FILE *)
