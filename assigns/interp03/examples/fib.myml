@@ -10,7 +10,7 @@ let print_fib n =
 
 let _ = print_fib 5
 
-let fib n =
+(* let fib n =
   if n = 0 || n = 1
   then n
   else fib (n - 1) + fib (n - 2)
@@ -25,3 +25,4 @@ let print_fib n =
   in go 0
 
 let _ = print_fib 10
+*)

@@ -510,10 +510,129 @@ type lexpr
   | App of lexpr * lexpr
   | Trace of lexpr
 
-let desugar (p : top_prog) : lexpr = Unit (* TODO *)
-let translate (e : lexpr) : stack_prog = [] (* TODO *)
-let serialize (p : stack_prog) : string = "" (* TODO *)
+let rec desugar (p : top_prog) : lexpr = 
+  let rec help (cur:expr) : lexpr = 
+    match cur with
+    | Unit -> Unit
+    | Num n -> Num n
+    | Bool b -> Bool b
+    | Var id -> Var id
+    | Uop (u, ex) -> Uop (u, help ex)
+    | Bop (b, ex1, ex2) -> Bop (b, help ex1, help ex2)
+    | Ife (ex1, ex2, ex3) -> Ife (help ex1, help ex2, help ex3)
+    | App (ex1, ex2) -> App (help ex1, help ex2)
+    | Fun (ids, ex) -> forfun ids (help ex)
+    | Let (id, args, ex1, ex2) -> App (Fun (id, help ex2), help ex1)
+    | Trace ex -> Trace (help ex)
+  and forfun ids ex =
+    match ids with
+    | [] -> ex
+    | id :: ids -> Fun (id, forfun ids ex)
+  in
+  match p with
+  | [] -> Unit
+  | [f, args, ex] -> App (Fun (f, Unit), forfun args (help ex))
+  | (f, args, ex) :: rest ->
+    App (Fun (f, desugar rest), forfun args (help ex))
 
+let checkbop bop1 bop2 ex1 ex2 num = [
+  [Push (Num num)]; ex2; [bop1];        
+  [Push (Num num)]; ex1; [bop1];      
+  [bop2]
+] |> List.flatten
+
+let rec translate (e : lexpr) : stack_prog = 
+  match e with
+  | Unit -> [Push Unit]
+  | Num n -> [Push (Num n)]
+  | Bool b -> [Push (Bool b)]
+  | Var id -> [Lookup id]
+  | Uop (Neg, ex) -> translate ex @ [Push (Num 0); Sub]
+  | Uop (Not, ex) -> translate ex @ [If ([Push (Bool false)], [Push (Bool true)])]
+  | Bop (Add, ex1, ex2) -> 
+    let ex1_code = translate ex1 in
+    let ex2_code = translate ex2 in
+    checkbop Add Add ex1_code ex2_code 0
+  | Bop (Sub, ex1, ex2) -> 
+    let ex1_code = translate ex1 in
+    let ex2_code = translate ex2 in
+    checkbop Sub Sub ex1_code ex2_code 0
+  | Bop (Mul, ex1, ex2) -> 
+    let ex1_code = translate ex1 in
+    let ex2_code = translate ex2 in
+    checkbop Mul Mul ex1_code ex2_code 1
+  | Bop (Div, ex1, ex2) -> 
+    let ex1_code = translate ex1 in
+    let ex2_code = translate ex2 in
+    checkbop Div Div ex1_code ex2_code 1
+  | Bop (And, ex1, ex2) -> translate ex1 @ [If (translate ex2, [Push (Bool false)])]
+  | Bop (Or, ex1, ex2) -> translate ex1 @ [If ([Push (Bool true)], translate ex2)]
+  | Bop (Lt, ex1, ex2) ->  let ex1_code = translate ex1 in
+    let ex2_code = translate ex2 in
+    checkbop Add Lt ex1_code ex2_code 0
+  | Bop (Lte, ex1, ex2) -> 
+    let lt2 = translate ex2 @ translate ex1 @ [Lt] in
+    let lt1 = Bool (ex2 < ex1) in
+    lt2 @ 
+    [If ([Push (Bool true)],      
+         translate lt1 @ 
+         [If ([Push (Bool false)],  
+              [Push (Bool true)])])] 
+  | Bop (Gt, ex1, ex2) -> let ex1_code = translate ex1 in
+  let ex2_code = translate ex2 in
+  checkbop Add Lt ex2_code ex1_code 0
+  | Bop (Gte, ex1, ex2) -> 
+    let lt2 = translate ex2 @ translate ex1 @ [Lt] in 
+    let lt1 = Bool (ex2 < ex1) in
+    lt2 @ 
+    [If ([Push (Bool false)],         
+        translate lt1 @ 
+        [If ([Push (Bool true)],   
+              [Push (Bool true)])])]
+  | Bop (Eq, ex1, ex2) -> 
+    let lt2 = translate ex2 @ translate ex1 @ [Lt] in
+    let lt1 = Bool (ex2 < ex1) in
+    lt2 @
+    [If ([Push (Bool false)],
+      translate lt1 @ [If ([Push (Bool false)], [Push (Bool true)])])]
+  | Bop (Neq, ex1, ex2) ->
+    let lt2 = translate ex2 @ translate ex1 @ [Lt] in
+    let lt1 = Bool (ex1 > ex2) in
+    lt2 @
+    [If ([Push (Bool true)],
+      translate lt1 @ [If ([Push (Bool true)], [Push (Bool false)])])]
+  | Ife (ex1, ex2, ex3) -> translate ex1 @ [If (translate ex2, translate ex3)]
+  | Fun (id, body) -> [Fun (id, [Swap] @ [Assign id] @ translate body @ [Swap] @ [Return])]
+  | App (func, arg) -> translate arg @ translate func @ [Call]
+  | Trace e -> translate e @ ([Trace; Push Unit])
+  
+  let rec serialize (p : stack_prog) : string = 
+    let rec command_to_string = function
+      | Push (Num n) -> "push " ^ string_of_int n
+      | Push (Bool b) -> "push " ^ (if b then "true" else "false")
+      | Push Unit -> "push unit"
+      | Swap -> "swap"
+      | Trace -> "trace"
+      | Add -> "add"
+      | Sub -> "sub"
+      | Mul -> "mul"
+      | Div -> "div"
+      | Lt -> "lt"
+      | If (p1, p2) ->
+          "if " ^ (serialize p1) ^ " else " ^ (serialize p2) ^ " end"
+      | Fun (func, prg) -> "fun " ^ func ^ " begin " ^ (serialize prg) ^ " end"
+      | Call -> "call"
+      | Return -> "return"
+      | Assign x -> 
+        if is_upper_case (String.get x 0) || is_lower_case (String.get x 0)
+           then "assign A" ^ String.uppercase_ascii x
+        else "assign BK"
+      | Lookup x ->
+        if is_upper_case (String.get x 0) || is_lower_case (String.get x 0)
+          then "lookup A" ^ String.uppercase_ascii x
+       else "lookup BK"
+    in
+    String.concat "\n" (List.map command_to_string p)
 let compile (s : string) : string option =
   match parse_top_prog s with
   | Some p -> Some (serialize (translate (desugar p)))
@@ -522,3 +641,14 @@ let compile (s : string) : string option =
 (* ============================================================ *)
 
 (* END OF FILE *)
+let test = "let print_fib n =
+  let go a b n =
+    if n <= 0
+    then ()
+    else
+      let _ = trace a in
+      go b (a + b) (n - 1)
+  in
+  go 0 1 n"
+
+let test1 = parse_top_prog test

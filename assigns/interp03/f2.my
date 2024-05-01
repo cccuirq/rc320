@@ -1,0 +1,49 @@
+fun C beginswap
+assign BK
+push 10
+trace
+push unit
+fun C beginswap
+assign BK
+push 10
+swap
+return end
+call
+swap
+return end
+fun C beginswap
+assign AX
+fun C beginswap
+assign BK
+push true
+trace
+push unit
+fun C beginswap
+assign BK
+push true
+swap
+return end
+call
+swap
+return end
+fun C beginswap
+assign AY
+push unit
+lookup AY
+call
+push 0
+add
+push unit
+lookup AX
+call
+push 0
+add
+add
+trace
+push unit
+swap
+return end
+call
+swap
+return end
+call

@@ -1,0 +1,144 @@
+funnbeginswap
+assign AN
+funibeginswap
+assign AI
+push 0
+push 1
+push 1
+lookup AI
+div
+push 1
+lookup AN
+div
+div
+mul
+push 1
+lookup AI
+mul
+mul
+sub
+push 0
+lookup AN
+sub
+sub
+swap
+return end
+swap
+return end
+funmodulobeginswap
+assign AMODULO
+funnbeginswap
+assign AN
+push 0
+push 1
+add
+push 0
+lookup AI
+add
+lt
+if lookup ARES else push 0
+lookup AI
+lookup AN
+lookup AMODULO
+call
+call
+lt
+if push false else push true
+if push false else push true end end
+if push 0
+lookup AI
+add
+push 0
+lookup ARES
+add
+add
+push 0
+push 1
+sub
+push 0
+lookup AI
+sub
+sub
+lookup APHI
+call
+call else lookup ARES
+push 0
+push 1
+sub
+push 0
+lookup AI
+sub
+sub
+lookup APHI
+call
+call end end
+funphibeginswap
+assign APHI
+funibeginswap
+assign AI
+funresbeginswap
+assign ARES
+lookup AN
+push 0
+push 0
+push 1
+sub
+push 0
+lookup AN
+sub
+sub
+lookup APHI
+call
+call
+lt
+if push false else push true
+if push false else push true end end
+swap
+return end
+swap
+return end
+swap
+return end
+call
+swap
+return end
+funis_perfectbeginswap
+assign AIS_PERFECT
+push 6
+lookup AIS_PERFECT
+call
+trace
+push unit
+fun_beginswap
+assign BK
+push 28
+lookup AIS_PERFECT
+call
+trace
+push unit
+fun_beginswap
+assign BK
+push 24
+lookup AIS_PERFECT
+call
+if push false else push true end
+trace
+push unit
+fun_beginswap
+assign BK
+push unit
+swap
+return end
+call
+swap
+return end
+call
+swap
+return end
+call
+swap
+return end
+call
+swap
+return end
+call

@@ -1,0 +1,19 @@
+fun C beginswap
+assign AX
+fun C beginswap
+assign AY
+lookup AX
+swap
+return end
+swap
+return end
+fun C beginswap
+assign AK
+push 10
+push 5
+lookup AK
+call
+call
+swap
+return end
+call

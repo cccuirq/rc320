@@ -1,0 +1,27 @@
+fun x begin swap
+assign AX
+fun y begin swap
+assign AY
+lookup AX
+swap
+return end
+swap
+return end
+fun k begin swap
+assign AK
+push 10
+push 5
+lookup AK
+call
+call
+trace
+push unit
+fun _ begin swap
+assign BK
+push unit
+swap
+return end
+call
+swap
+return end
+call
