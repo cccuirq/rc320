@@ -1,15 +1,27 @@
-fun n begin swap
-assign AN
+fun C begin swap assign AN
+fun C begin swap assign AA
+fun C begin swap assign AB
+fun C begin swap assign AN
 push 0
 lookup AN
 lt
-if push true else push true
-if push false else push true end end
-if push unit else lookup AA
+if
+push true
+else
+push true
+if
+push false
+else
+push true
+end
+end
+if
+push unit
+else
+lookup AA
 trace
 push unit
-fun _ begin swap
-assign BK
+fun C begin swap assign B
 push 0
 push 1
 sub
@@ -25,38 +37,34 @@ lookup AA
 add
 add
 lookup AB
-lookup AGO
+lookup AGAO
 call
 call
 call
-swap
-return end
-call end
-fun go begin swap
-assign AGO
+swap return end
+call
+end
+swap return end
+swap return end
+swap return end
+fun C begin swap assign AGAO
 lookup AN
 push 1
 push 0
-lookup AGO
+lookup AGAO
 call
 call
 call
-swap
-return end
+swap return end
 call
-swap
-return end
-fun print_fib begin swap
-assign APRINT_FIB
+swap return end
+fun C begin swap assign APARAIANATBAFAIAB
 push 5
-lookup APRINT_FIB
+lookup APARAIANATBAFAIAB
 call
-fun _ begin swap
-assign BK
+fun C begin swap assign B
 push unit
-swap
-return end
+swap return end
 call
-swap
-return end
+swap return end
 call

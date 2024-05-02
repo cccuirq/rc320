@@ -509,6 +509,10 @@ type lexpr
   | Fun of ident * lexpr
   | App of lexpr * lexpr
   | Trace of lexpr
+let rec helper p = 
+  match p with
+| (id, xs, e) :: t -> Let (id, xs, e, helper t)
+| [] -> Unit
 
 let rec desugar (p : top_prog) : lexpr = 
   let rec help (cur:expr) : lexpr = 
@@ -522,18 +526,15 @@ let rec desugar (p : top_prog) : lexpr =
     | Ife (ex1, ex2, ex3) -> Ife (help ex1, help ex2, help ex3)
     | App (ex1, ex2) -> App (help ex1, help ex2)
     | Fun (ids, ex) -> forfun ids (help ex)
-    | Let (id, args, ex1, ex2) -> App (Fun (id, help ex2), help ex1)
+    | Let (x, [], e1, e2) -> App(Fun(x, help e2), help e1)
+    | Let (x, xs, e1, e2) -> help(Let(x, [], Fun(xs, e1) , e2))
     | Trace ex -> Trace (help ex)
   and forfun ids ex =
     match ids with
     | [] -> ex
     | id :: ids -> Fun (id, forfun ids ex)
   in
-  match p with
-  | [] -> Unit
-  | [f, args, ex] -> App (Fun (f, Unit), forfun args (help ex))
-  | (f, args, ex) :: rest ->
-    App (Fun (f, desugar rest), forfun args (help ex))
+  help (helper p)
 
 let checkbop bop1 bop2 ex1 ex2 num = [
   [Push (Num num)]; ex2; [bop1];        
@@ -544,7 +545,7 @@ let checkbop bop1 bop2 ex1 ex2 num = [
 let rec translate (e : lexpr) : stack_prog = 
   match e with
   | Unit -> [Push Unit]
-  | Num n -> [Push (Num n)]
+  | Num n -> if n >= 0 then [Push (Num n)] else [Push (Num n); Push (Num 0); Sub]
   | Bool b -> [Push (Bool b)]
   | Var id -> [Lookup id]
   | Uop (Neg, ex) -> translate ex @ [Push (Num 0); Sub]
@@ -602,37 +603,44 @@ let rec translate (e : lexpr) : stack_prog =
     [If ([Push (Bool true)],
       translate lt1 @ [If ([Push (Bool true)], [Push (Bool false)])])]
   | Ife (ex1, ex2, ex3) -> translate ex1 @ [If (translate ex2, translate ex3)]
-  | Fun (id, body) -> [Fun (id, [Swap] @ [Assign id] @ translate body @ [Swap] @ [Return])]
+  | Fun (x, e) -> [Fun (x, translate e)]
   | App (func, arg) -> translate arg @ translate func @ [Call]
   | Trace e -> translate e @ ([Trace; Push Unit])
   
+  let cap (s : string) : string =
+  let rec go (s : char list) (acc : char list) : char list =
+    match s with
+    | [] -> acc
+    | c :: cs -> 
+      if is_lower_case c then go cs (Char.uppercase_ascii c :: 'A' :: acc) (*lower*)
+      else 
+        if is_upper_case c then go cs (c :: 'A' :: acc) (*Upper*)
+        else go cs (c :: acc) (*underscore*)
+  in
+  implode (List.map (fun x -> if x = '_' then 'B' else x) (List.rev (go (explode s) [])))
+  
   let rec serialize (p : stack_prog) : string = 
-    let rec command_to_string = function
-      | Push (Num n) -> "push " ^ string_of_int n
-      | Push (Bool b) -> "push " ^ (if b then "true" else "false")
-      | Push Unit -> "push unit"
-      | Swap -> "swap"
-      | Trace -> "trace"
-      | Add -> "add"
-      | Sub -> "sub"
-      | Mul -> "mul"
-      | Div -> "div"
-      | Lt -> "lt"
-      | If (p1, p2) ->
-          "if " ^ (serialize p1) ^ " else " ^ (serialize p2) ^ " end"
-      | Fun (func, prg) -> "fun " ^ func ^ " begin " ^ (serialize prg) ^ " end"
-      | Call -> "call"
-      | Return -> "return"
-      | Assign x -> 
-        if is_upper_case (String.get x 0) || is_lower_case (String.get x 0)
-           then "assign A" ^ String.uppercase_ascii x
-        else "assign BK"
-      | Lookup x ->
-        if is_upper_case (String.get x 0) || is_lower_case (String.get x 0)
-          then "lookup A" ^ String.uppercase_ascii x
-       else "lookup BK"
-    in
-    String.concat "\n" (List.map command_to_string p)
+    let rec help (p: stack_prog) : string =
+      match p with
+    | [] -> ""
+    | Push (Num n) :: t -> "push " ^ string_of_int n ^ "\n" ^ help t
+    | Push (Bool b) :: t -> "push " ^ string_of_bool b ^ "\n" ^ help t
+    | Push Unit :: t -> "push unit\n" ^ help t
+    | Swap :: t -> "swap\n" ^ help t
+    | Trace :: t -> "trace\n" ^ help t
+    | Add :: t -> "add\n" ^ help t
+    | Sub :: t -> "sub\n" ^ help t
+    | Mul :: t -> "mul\n" ^ help t
+    | Div :: t -> "div\n" ^ help t
+    | Lt :: t -> "lt\n" ^ help t
+    | If (p1, p2) :: t -> "if\n" ^ help p1 ^ "else\n" ^ help p2 ^ "end\n" ^ help t
+    | Fun (x, p) :: t ->  "fun C begin swap assign " ^ cap x ^ "\n" ^ help p ^ "swap return end\n" ^ help t
+    | Call :: t -> "call\n" ^ help t
+    | Return :: t -> "return\n" ^ help t
+    | Assign x :: t -> "assign " ^ cap x ^ "\n" ^ help t
+    | Lookup x :: t -> "lookup " ^ cap x ^ "\n" ^ help t
+  in
+  help p
 let compile (s : string) : string option =
   match parse_top_prog s with
   | Some p -> Some (serialize (translate (desugar p)))
